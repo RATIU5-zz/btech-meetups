@@ -1,22 +1,7 @@
-import { useEffect, useState } from "react";
-import MeetupList from "../components/meetups/MeetupList";
+import { MongoClient } from "mongodb";
+import CONFIG from "../config.json";
 
-const DUMMY_MEETUPS = [
-	{
-		id: "m1",
-		title: "A First Meetup",
-		image: "https://images.unsplash.com/photo-1626788383851-428d432f8f2e?ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&ixlib=rb-1.2.1&auto=format&fit=crop&w=1001&q=80",
-		address: "Some address 5, 1234 Some City",
-		description: "This is a first meetup!",
-	},
-	{
-		id: "m2",
-		title: "A Second Meetup",
-		image: "https://images.unsplash.com/photo-1626520709326-6a89236a4fd8?ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&ixlib=rb-1.2.1&auto=format&fit=crop&w=1955&q=80",
-		address: "Some address 10, 1234 Some City",
-		description: "This is a second meetup!",
-	},
-];
+import MeetupList from "../components/meetups/MeetupList";
 
 function HomePage(props) {
 	return <MeetupList meetups={props.meetups} />;
@@ -24,9 +9,25 @@ function HomePage(props) {
 
 // Never gets to client side JS, used for Nextjs build only. Can only be in pages components
 export async function getStaticProps() {
+	const client = await MongoClient.connect(
+		`mongodb+srv://${CONFIG.DB_USER}:${CONFIG.DB_PASS}@cluster0.pjqlc.mongodb.net/meetups?retryWrites=true&w=majority`
+	);
+	const db = client.db();
+
+	const meetupsCollection = db.collection("meetups");
+
+	const meetups = await meetupsCollection.find().toArray();
+
+	client.close();
+
 	return {
 		props: {
-			meetups: DUMMY_MEETUPS,
+			meetups: meetups.map(m => ({
+				title: m.title,
+				address: m.address,
+				image: m.image,
+				id: m._id.toString(),
+			})),
 		},
 		revalidate: 10,
 	};
